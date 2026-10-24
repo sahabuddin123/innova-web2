@@ -247,59 +247,79 @@ class InvestmentWithdrawApiController extends ApiController
      */
     public function approve(ProcessWithdrawRequest $request, int $id): JsonResponse
     {
-        $withdraw = InvestmentWithdraw::find($id);
+        return DB::transaction(function () use ($request, $id) {
+            $withdraw = InvestmentWithdraw::find($id);
 
-        if (!$withdraw) {
-            return $this->error('Investment withdrawal request not found', 404);
-        }
+            if (!$withdraw) {
+                return $this->error('Investment withdrawal request not found', 404);
+            }
 
-        // State Machine Guard
-        if ($withdraw->status !== 'pending') {
-            return $this->error(
-                "Cannot approve withdrawal request: Only pending requests can be approved (current status: {$withdraw->status}).",
-                409
-            );
-        }
+            if ($withdraw->status !== 'pending') {
+                return $this->error(
+                    "Cannot approve withdrawal request: Only pending requests can be approved (current status: {$withdraw->status}).",
+                    409
+                );
+            }
 
-        // Financial Balance Verification using BCMath
-        $currentBalance = $this->calculateAvailableCapitalBalance((int) $withdraw->shareholder_id);
-        $cleanAmount = str_replace(',', '', (string) $withdraw->amount);
-        $withdrawAmount = is_numeric($cleanAmount) ? bcadd($cleanAmount, '0', 2) : '0.00';
-        $projectedBalance = bcsub($currentBalance, $withdrawAmount, 2);
+            // Serialize approvals for the same shareholder so two different requests
+            // cannot both pass the balance check against the same stale balance.
+            $shareholder = Shareholder::whereKey((int) $withdraw->shareholder_id)
+                ->lockForUpdate()
+                ->first();
 
-        if (bccomp($projectedBalance, '0.00', 2) < 0) {
-            return $this->error(
-                "Cannot approve withdrawal: Shareholder active capital balance ({$currentBalance}) is insufficient for withdrawal amount ({$withdrawAmount}). Resulting balance would be {$projectedBalance}.",
-                422
-            );
-        }
+            if (!$shareholder) {
+                return $this->error('Shareholder not found', 404);
+            }
 
-        // Conditional Atomic Status Transition to prevent duplicate approvals
-        $affectedRows = DB::table('investment_withdraws')
-            ->where('id', $id)
-            ->where('status', 'pending')
-            ->update([
-                'status'            => 'approved',
-                'processed_by'      => auth()->id(),
-                'processed_at'      => Carbon::now(),
-                'processed_remarks' => $request->remarks,
-                'updated_at'        => Carbon::now(),
-            ]);
+            // Re-read status after acquiring the shareholder lock. The conditional
+            // update below remains the final guard against duplicate processing.
+            $withdraw->refresh();
+            if ($withdraw->status !== 'pending') {
+                return $this->error(
+                    "Cannot approve withdrawal request: Only pending requests can be approved (current status: {$withdraw->status}).",
+                    409
+                );
+            }
 
-        if ($affectedRows !== 1) {
-            return $this->error(
-                'Withdrawal request could not be approved because its status was already changed by another process.',
-                409
-            );
-        }
+            $currentBalance = $this->calculateAvailableCapitalBalance((int) $withdraw->shareholder_id);
+            $cleanAmount = str_replace(',', '', (string) $withdraw->amount);
+            $withdrawAmount = is_numeric($cleanAmount) ? bcadd($cleanAmount, '0', 2) : '0.00';
+            $projectedBalance = bcsub($currentBalance, $withdrawAmount, 2);
 
-        $withdraw = InvestmentWithdraw::with([
-            'shareholder:id,name,phone,email,designation',
-            'requester:id,name,email',
-            'processor:id,name,email',
-        ])->find($id);
+            if (bccomp($projectedBalance, '0.00', 2) < 0) {
+                return $this->error(
+                    "Cannot approve withdrawal: Shareholder active capital balance ({$currentBalance}) is insufficient for withdrawal amount ({$withdrawAmount}). Resulting balance would be {$projectedBalance}.",
+                    422
+                );
+            }
 
-        return $this->success($withdraw, 'Investment withdrawal request approved successfully');
+            $now = Carbon::now();
+            $affectedRows = DB::table('investment_withdraws')
+                ->where('id', $id)
+                ->where('status', 'pending')
+                ->update([
+                    'status'            => 'approved',
+                    'processed_by'      => auth()->id(),
+                    'processed_at'      => $now,
+                    'processed_remarks' => $request->remarks,
+                    'updated_at'        => $now,
+                ]);
+
+            if ($affectedRows !== 1) {
+                return $this->error(
+                    'Withdrawal request could not be approved because its status was already changed by another process.',
+                    409
+                );
+            }
+
+            $withdraw = InvestmentWithdraw::with([
+                'shareholder:id,name,phone,email,designation',
+                'requester:id,name,email',
+                'processor:id,name,email',
+            ])->find($id);
+
+            return $this->success($withdraw, 'Investment withdrawal request approved successfully');
+        });
     }
 
     /**
