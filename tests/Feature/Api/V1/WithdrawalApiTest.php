@@ -1129,4 +1129,30 @@ class WithdrawalApiTest extends TestCase
         $this->assertCount(1, $response->json('data.data'));
         $this->assertEquals('77777.00', $response->json('data.data.0.amount'));
     }
+
+    public function test_soft_deleted_dividend_withdrawal_cannot_be_approved_or_rejected(): void
+    {
+        $dividend = DividendWithdraw::create([
+            'shareholder_id' => $this->shareholder->id,
+            'amount'         => 5000.00,
+            'status'         => 'pending',
+        ]);
+
+        $dividend->delete();
+
+        // Show returns 404
+        $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('GET', "/api/v1/withdrawals/dividend/{$dividend->id}")
+            ->assertStatus(404);
+
+        // Approve returns 404
+        $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('POST', "/api/v1/withdrawals/dividend/{$dividend->id}/approve")
+            ->assertStatus(404);
+
+        // Reject returns 404
+        $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('POST', "/api/v1/withdrawals/dividend/{$dividend->id}/reject")
+            ->assertStatus(404);
+    }
 }

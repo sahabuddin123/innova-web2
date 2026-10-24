@@ -1,7 +1,7 @@
 # Phase 2.7.2 Implementation & Verification Report
 ## Investment Withdrawal & Dividend Withdrawal APIs
 
-**Document Version:** 1.2.0  
+**Document Version:** 1.3.0  
 **Execution Date:** 2026-10-24  
 **Project:** INNOVA Computers BD (`innova-web`)  
 **Phase Status:** **COMPLETE & VERIFIED (PASS WITH LIMITATIONS)**  
@@ -95,6 +95,7 @@ All 14 endpoints are registered in [`routes/api.php`](file:///c:/wamp64/www/inno
 | **7** | **Legacy Status Filter Omission** | Querying `?status=approved` on `index()` only matched `'approved'`, excluding legacy `'1'` rows. | Updated `index()` query to check `whereIn('status', ['approved', '1'])` whenever `status=approved` or `status=1` is requested. |
 | **8** | **Search by Amount Omission** | Searching records by amount (e.g. `?search=50000`) was omitted from API search queries. | Added `->orWhere('amount', 'LIKE', $search)` to search query in both controllers. |
 | **9** | **Missing Null Check in Approval Workflow** | Approving a non-existent or soft-deleted withdrawal evaluated `$withdraw->status` on `null`, causing an unhandled 500 error instead of a clean 404 response. | Added explicit `if (!$withdraw) return $this->error('Investment withdrawal request not found', 404);` before status guard in `InvestmentWithdrawApiController::approve()`. |
+| **10** | **Soft-Deleted Record Status Mutation Race** | If a pending withdrawal request was soft-deleted concurrently by another admin while in-flight, `DB::table()->update()` would transition the soft-deleted row because `DB::table` bypasses `SoftDeletingScope`. | Added `$withdraw->refresh()` and `if ($withdraw->trashed()) return 404;` check, and appended `->whereNull('deleted_at')` to all conditional update queries across both controllers. |
 
 ---
 
@@ -172,32 +173,63 @@ Shareholder dividend withdrawals represent profit distributions from operational
 
 ---
 
-## 7. Concurrency, Idempotency & MyISAM Engine Limitations
+## 7. Storage Engine Verification, Concurrency & Transaction Guarantees
 
-### 7.1 Implemented Safeguards
-Legacy tables `investment_withdraws` and `dividend_withdraws` use the MySQL **MyISAM** storage engine. Because MyISAM lacks ACID transaction rollbacks and row-level locks (`SELECT ... FOR UPDATE`), the following architectural safeguards were implemented:
+### 7.1 Verified Database Storage Engines (Live Database vs Clean Migrations)
 
-1. **State Re-verification:** The record's state and current balance are re-fetched immediately before processing within `DB::transaction()`.
-2. **Conditional Atomic Updates:** The status transition SQL is executed as:
-   ```sql
-   UPDATE investment_withdraws 
-   SET status = 'approved', processed_by = ?, processed_at = ?, processed_remarks = ?, updated_at = ?
-   WHERE id = ? AND status = 'pending';
-   ```
-3. **Affected Row Count Verification:** The application strictly inspects the update statement's affected row count. If affected rows $\ne 1$, another thread or administrator has already transitioned the record, and the controller immediately halts with `409 Conflict`.
-4. **Idempotency:** A withdrawal request cannot be counted more than once in the capital statement because the statement query groups by record and only filters `whereIn('status', ['approved', '1'])`.
+Reliable evidence was inspected from live database schema metadata (`information_schema.TABLES` extracted via PDO from MySQL 8.0.31 database `icbd_web` into `actual_mysql_schema.json`) and repository migration files:
 
-### 7.2 Concurrency & Cross-Request Serialization
-1. **InnoDB Shareholder Mutex (`lockForUpdate()`):**
-   To mitigate race conditions between two concurrent approval requests for the *same shareholder*, `InvestmentWithdrawApiController::approve()` acquires an exclusive row lock on the InnoDB `shareholders` table:
+| Table Name | Actual Live MySQL Engine | Live Row Count | Clean Migration Engine | Evidence Source |
+| :--- | :--- | :--- | :--- | :--- |
+| `shareholders` | **InnoDB** | 0 | **InnoDB** | `information_schema.TABLES`, `2023_04_27_130942_create_shareholders_table.php` |
+| `invesments` | **InnoDB** | 46 | **InnoDB** | `information_schema.TABLES`, `2023_04_27_130952_create_invesments_table.php` |
+| `investment_withdraws` | **MyISAM** | 11 | **InnoDB** (Default) | `information_schema.TABLES`, `2026_10_24_000003_create_investment_withdraws_table.php` |
+| `dividend_withdraws` | **MyISAM** | 1 | **InnoDB** (Default) | `information_schema.TABLES`, `2026_10_24_000004_create_dividend_withdraws_table.php` |
+
+**Critical Architectural Distinction:**
+- In the **existing live database (`icbd_web`)**, the legacy withdrawal tables (`investment_withdraws` and `dividend_withdraws`) operate on **MyISAM**. They were created manually or imported from legacy SQL dumps prior to the introduction of Laravel migrations.
+- In **clean installations**, Laravel's `config/database.php` specifies `'engine' => null`, and the reconciliation migration files do not specify `$table->engine`. Consequently, a new installation on MySQL 8.0, PostgreSQL, or SQLite creates all tables under the DBMS default transactional engine (**InnoDB** on MySQL 8.0).
+
+### 7.2 Investment Withdrawal Concurrency & Shareholder Mutexing
+1. **Serialization Per Shareholder:**
+   In `InvestmentWithdrawApiController::approve()`, approvals for the same shareholder are serialized by acquiring an exclusive row-level lock on the **InnoDB** `shareholders` table:
    ```php
    $shareholder = Shareholder::whereKey((int) $withdraw->shareholder_id)
        ->lockForUpdate()
        ->first();
    ```
-   This serializes approvals for that shareholder: Thread B blocks until Thread A's transaction commits. After Thread A approves and deducts balance, Thread B wakes up, recalculates available capital against the updated ledger, and safely rejects any overdraft with `422 Unprocessable Entity`.
-2. **MyISAM Table Storage Engine Note:**
-   While `shareholders` operates on InnoDB with ACID row locks, the legacy withdrawal table (`investment_withdraws`) was historically configured with MyISAM. The combination of InnoDB shareholder row-mutexing, locked balance reads, and single-row conditional atomic status updates (`WHERE id = ? AND status = 'pending'`) provides defense-in-depth across both engine environments. Full cross-table foreign key constraints and end-to-end table locking will be finalized during the upcoming PostgreSQL migration.
+   Because `shareholders` is an **InnoDB** table on both live and fresh environments, MySQL blocks any concurrent transaction attempting to approve another withdrawal for the same shareholder until the active transaction commits.
+2. **Fresh Balance Recalculation:**
+   Once Thread B unblocks, it re-reads the withdrawal record (`$withdraw->refresh()`) and executes `calculateAvailableCapitalBalance()`. Because Thread A's transaction has already committed, Thread B reads the deducted ledger state. If insufficient funds remain, Thread B safely aborts with `422 Unprocessable Entity`, preventing cross-request over-withdrawal.
+3. **Single-Record Idempotency:**
+   If two requests attempt to approve the *exact same* pending record:
+   - The first thread updates the record to `'approved'` and commits.
+   - The second thread executes `$withdraw->refresh()`, encounters `$withdraw->status !== 'pending'`, and immediately aborts with `409 Conflict`.
+   - As an additional guard, the update SQL conditionally checks `WHERE id = ? AND status = 'pending' AND deleted_at IS NULL`. If affected rows $\ne 1$, it returns `409 Conflict`.
+
+### 7.3 Dividend Withdrawal Concurrency Analysis
+1. **Independent Discretionary Disbursements:**
+   Unlike capital investment withdrawals, dividend withdrawals represent discretionary corporate profit disbursements. In this application:
+   - There is no running dividend ledger or depletable capital balance pool.
+   - Approving multiple dividend disbursements for the same shareholder (e.g. quarterly dividends or bonus dividends) is valid and does not cause ledger overdraft.
+2. **Locking Rationale:**
+   Applying an exclusive shareholder row lock (`lockForUpdate()`) to dividend approvals would introduce artificial contention across unrelated dividend payouts. Therefore, dividend approvals do not lock the shareholder row.
+3. **Single-Record Protection:**
+   The atomic conditional query (`WHERE id = ? AND status = 'pending' AND deleted_at IS NULL`) strictly prevents duplicate or concurrent processing of the same dividend record. If two administrators click "Approve" simultaneously, exactly one succeeds and the other receives `409 Conflict`.
+
+### 7.4 Transaction Guarantees & Storage Engine Rollback Mechanics
+- **Transactional Engines (Clean Install InnoDB / SQLite / Target PostgreSQL):**
+  - Full ACID transaction atomicity is supported. Any unhandled exception or failure rolls back all queries within `DB::transaction()`.
+- **Non-Transactional Engine (Existing Live MySQL MyISAM):**
+  - MyISAM does not support multi-statement rollback. If an unhandled PHP fatal error occurs after `UPDATE investment_withdraws`, the update remains written to disk.
+  - However, because all validation, authorization, shareholder existence checks, amount checks, and balance calculations occur *before* the update query, and the atomic query is the final database operation in the transaction, the risk of partial application state corruption is minimized.
+  - The migration to PostgreSQL in Phase 3 will upgrade all tables to a fully transactional ACID engine.
+
+### 7.5 Defense-in-Depth Against In-Flight Soft Deletes
+If a withdrawal request is soft-deleted concurrently while an approval or rejection request is in-flight:
+1. `$withdraw->refresh()` updates the model's in-memory attributes.
+2. `if ($withdraw->trashed()) return $this->error('... not found', 404);` immediately aborts the workflow.
+3. The database update query explicitly includes `->whereNull('deleted_at')` to guarantee that soft-deleted rows can never be transitioned by raw query builder updates.
 
 ---
 
@@ -216,8 +248,8 @@ if ($connection->getDriverName() !== 'sqlite' || $connection->getDatabaseName() 
 
 #### 1. Phase 2.7.2 Withdrawal API Test Suite
 - **Command:** `php vendor/bin/phpunit tests/Feature/Api/V1/WithdrawalApiTest.php`
-- **Tests Executed:** **34 tests**
-- **Assertions:** **147 assertions**
+- **Tests Executed:** **35 tests**
+- **Assertions:** **150 assertions**
 - **Result:** **100% PASS (0 failures, 0 errors)**
 
 Test scenarios covered:

@@ -262,6 +262,10 @@ class DividendWithdrawApiController extends ApiController
             }
 
             // State Machine Guard
+            $withdraw->refresh();
+            if ($withdraw->trashed()) {
+                return $this->error('Dividend withdrawal request not found', 404);
+            }
             if ($withdraw->status !== 'pending') {
                 return $this->error(
                     "Cannot approve withdrawal request: Only pending requests can be approved (current status: {$withdraw->status}).",
@@ -289,6 +293,7 @@ class DividendWithdrawApiController extends ApiController
             $affectedRows = DB::table('dividend_withdraws')
                 ->where('id', $id)
                 ->where('status', 'pending')
+                ->whereNull('deleted_at')
                 ->update([
                     'status'            => 'approved',
                     'processed_by'      => $adminId,
@@ -336,6 +341,10 @@ class DividendWithdrawApiController extends ApiController
             }
 
             // State Machine Guard
+            $withdraw->refresh();
+            if ($withdraw->trashed()) {
+                return $this->error('Dividend withdrawal request not found', 404);
+            }
             if ($withdraw->status !== 'pending') {
                 return $this->error(
                     "Cannot reject withdrawal request: Only pending requests can be rejected (current status: {$withdraw->status}).",
@@ -348,6 +357,7 @@ class DividendWithdrawApiController extends ApiController
             $affectedRows = DB::table('dividend_withdraws')
                 ->where('id', $id)
                 ->where('status', 'pending')
+                ->whereNull('deleted_at')
                 ->update([
                     'status'            => 'rejected',
                     'processed_by'      => $adminId,

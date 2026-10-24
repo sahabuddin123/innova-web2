@@ -286,6 +286,9 @@ class InvestmentWithdrawApiController extends ApiController
             // Re-read status after acquiring the shareholder lock. The conditional
             // update below remains the final guard against duplicate processing.
             $withdraw->refresh();
+            if ($withdraw->trashed()) {
+                return $this->error('Investment withdrawal request not found', 404);
+            }
             if ($withdraw->status !== 'pending') {
                 return $this->error(
                     "Cannot approve withdrawal request: Only pending requests can be approved (current status: {$withdraw->status}).",
@@ -320,6 +323,7 @@ class InvestmentWithdrawApiController extends ApiController
             $affectedRows = DB::table('investment_withdraws')
                 ->where('id', $id)
                 ->where('status', 'pending')
+                ->whereNull('deleted_at')
                 ->update([
                     'status'            => 'approved',
                     'processed_by'      => $adminId,
@@ -366,6 +370,10 @@ class InvestmentWithdrawApiController extends ApiController
             }
 
             // State Machine Guard
+            $withdraw->refresh();
+            if ($withdraw->trashed()) {
+                return $this->error('Investment withdrawal request not found', 404);
+            }
             if ($withdraw->status !== 'pending') {
                 return $this->error(
                     "Cannot reject withdrawal request: Only pending requests can be rejected (current status: {$withdraw->status}).",
@@ -378,6 +386,7 @@ class InvestmentWithdrawApiController extends ApiController
             $affectedRows = DB::table('investment_withdraws')
                 ->where('id', $id)
                 ->where('status', 'pending')
+                ->whereNull('deleted_at')
                 ->update([
                     'status'            => 'rejected',
                     'processed_by'      => $adminId,
