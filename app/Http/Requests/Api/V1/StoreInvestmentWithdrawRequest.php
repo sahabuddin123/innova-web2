@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use Illuminate\Validation\Rule;
+
 /**
  * Class StoreInvestmentWithdrawRequest
  *
@@ -20,7 +22,11 @@ class StoreInvestmentWithdrawRequest extends ApiRequest
     public function rules(): array
     {
         return [
-            'shareholder_id' => 'required|integer|exists:shareholders,id',
+            'shareholder_id' => [
+                'required',
+                'integer',
+                Rule::exists('shareholders', 'id')->whereNull('deleted_at'),
+            ],
             'amount'         => 'required|numeric|min:0.01',
             'withdraw_date'  => 'nullable|date',
             'method'         => 'nullable|string|max:191',

@@ -1004,4 +1004,129 @@ class WithdrawalApiTest extends TestCase
             ->json('POST', "/api/v1/withdrawals/investment/{$withdraw->id}/approve")
             ->assertStatus(404);
     }
+
+    public function test_cannot_create_withdrawal_for_soft_deleted_shareholder_returns_422(): void
+    {
+        $deletedShareholder = Shareholder::create([
+            'name'     => 'Departed Shareholder',
+            'email'    => 'departed@example.com',
+            'phone'    => '01711999999',
+            'isActive' => 0,
+        ]);
+        $deletedShareholder->delete();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('POST', '/api/v1/withdrawals/investment', [
+                'shareholder_id' => $deletedShareholder->id,
+                'amount'         => 10000.00,
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['shareholder_id']);
+    }
+
+    public function test_cannot_approve_withdrawal_if_shareholder_was_deleted_returns_422(): void
+    {
+        $tempShareholder = Shareholder::create([
+            'name'     => 'Temporary Shareholder',
+            'email'    => 'temp@example.com',
+            'phone'    => '01711888888',
+            'isActive' => 1,
+        ]);
+
+        $withdraw = InvestmentWithdraw::create([
+            'shareholder_id' => $tempShareholder->id,
+            'amount'         => 10000.00,
+            'status'         => 'pending',
+        ]);
+
+        // Delete shareholder prior to approval
+        $tempShareholder->delete();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('POST', "/api/v1/withdrawals/investment/{$withdraw->id}/approve");
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Associated shareholder record not found or has been deleted.',
+            ]);
+    }
+
+    public function test_cannot_approve_withdrawal_with_zero_or_negative_amount_returns_422(): void
+    {
+        $withdraw = InvestmentWithdraw::create([
+            'shareholder_id' => $this->shareholder->id,
+            'amount'         => 0.00,
+            'status'         => 'pending',
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('POST', "/api/v1/withdrawals/investment/{$withdraw->id}/approve");
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+            ]);
+    }
+
+    public function test_cannot_delete_legacy_approved_status_1_withdrawal_returns_409(): void
+    {
+        $legacyWithdraw = InvestmentWithdraw::create([
+            'shareholder_id' => $this->shareholder->id,
+            'amount'         => 15000.00,
+            'status'         => '1', // legacy approved representation
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('DELETE', "/api/v1/withdrawals/investment/{$legacyWithdraw->id}");
+
+        $response->assertStatus(409)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Cannot delete withdrawal request: Approved withdrawals are locked for financial audit integrity.',
+            ]);
+    }
+
+    public function test_filter_by_status_approved_matches_legacy_status_1_records(): void
+    {
+        InvestmentWithdraw::create([
+            'shareholder_id' => $this->shareholder->id,
+            'amount'         => 5000.00,
+            'status'         => '1', // legacy approved
+        ]);
+        InvestmentWithdraw::create([
+            'shareholder_id' => $this->shareholder->id,
+            'amount'         => 7000.00,
+            'status'         => 'approved', // canonical approved
+        ]);
+        InvestmentWithdraw::create([
+            'shareholder_id' => $this->shareholder->id,
+            'amount'         => 3000.00,
+            'status'         => 'pending',
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('GET', '/api/v1/withdrawals/investment?status=approved');
+
+        $response->assertStatus(200);
+        $this->assertCount(2, $response->json('data.data'));
+    }
+
+    public function test_search_filter_matches_by_amount(): void
+    {
+        InvestmentWithdraw::create([
+            'shareholder_id' => $this->shareholder->id,
+            'amount'         => 77777.00,
+            'status'         => 'pending',
+            'method'         => 'Cash',
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->adminToken)
+            ->json('GET', '/api/v1/withdrawals/investment?search=77777');
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('data.data'));
+        $this->assertEquals('77777.00', $response->json('data.data.0.amount'));
+    }
 }

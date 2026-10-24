@@ -44,7 +44,14 @@ class InvestmentWithdrawApiController extends ApiController
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $status = strtolower(trim($request->status));
+            $query->where(function ($q) use ($status) {
+                if (in_array($status, ['approved', '1'], true)) {
+                    $q->whereIn('status', ['approved', '1']);
+                } else {
+                    $q->where('status', $status);
+                }
+            });
         }
 
         if ($request->filled('start_date')) {
@@ -68,13 +75,14 @@ class InvestmentWithdrawApiController extends ApiController
         }
 
         if ($request->filled('search')) {
-            $search = '%' . $request->search . '%';
+            $search = '%' . trim($request->search) . '%';
             $query->where(function ($q) use ($search) {
                 $q->where('method', 'LIKE', $search)
                   ->orWhere('receiver_name', 'LIKE', $search)
                   ->orWhere('branch_name', 'LIKE', $search)
                   ->orWhere('account_number', 'LIKE', $search)
                   ->orWhere('remarks', 'LIKE', $search)
+                  ->orWhere('amount', 'LIKE', $search)
                   ->orWhereHas('shareholder', function ($sq) use ($search) {
                       $sq->where('name', 'LIKE', $search);
                   });
@@ -219,8 +227,8 @@ class InvestmentWithdrawApiController extends ApiController
             return $this->error('Investment withdrawal request not found', 404);
         }
 
-        // Integrity Guard: Approved withdrawals cannot be deleted
-        if ($withdraw->status === 'approved') {
+        // Integrity Guard: Approved withdrawals cannot be deleted (both 'approved' and legacy '1')
+        if (in_array(strtolower((string) $withdraw->status), ['approved', '1'], true)) {
             return $this->error(
                 'Cannot delete withdrawal request: Approved withdrawals are locked for financial audit integrity.',
                 409
@@ -236,10 +244,13 @@ class InvestmentWithdrawApiController extends ApiController
      * Approve a pending capital investment withdrawal request.
      *
      * Enforces:
-     * 1. State machine check: status must currently be 'pending'.
-     * 2. Financial balance check: Shareholder available capital balance >= withdrawal amount.
+     * 1. Transaction boundary via DB::transaction.
+     * 2. State machine check: status must currently be 'pending'.
+     * 3. Referential integrity: associated shareholder must exist and not be deleted.
+     * 4. Amount integrity: withdrawal amount must be strictly greater than zero.
+     * 5. Financial balance check: Shareholder available capital balance >= withdrawal amount.
      *    Uses BCMath at scale 2 to prevent any negative balance (even -0.01).
-     * 3. Conditional atomic update: ensures no race condition or double-approval occurs.
+     * 6. Conditional atomic update: ensures no race condition or double-approval occurs.
      *
      * @param ProcessWithdrawRequest $request
      * @param int $id
@@ -254,6 +265,7 @@ class InvestmentWithdrawApiController extends ApiController
                 return $this->error('Investment withdrawal request not found', 404);
             }
 
+            // State Machine Guard
             if ($withdraw->status !== 'pending') {
                 return $this->error(
                     "Cannot approve withdrawal request: Only pending requests can be approved (current status: {$withdraw->status}).",
@@ -268,7 +280,7 @@ class InvestmentWithdrawApiController extends ApiController
                 ->first();
 
             if (!$shareholder) {
-                return $this->error('Shareholder not found', 404);
+                return $this->error('Associated shareholder record not found or has been deleted.', 422);
             }
 
             // Re-read status after acquiring the shareholder lock. The conditional
@@ -281,9 +293,18 @@ class InvestmentWithdrawApiController extends ApiController
                 );
             }
 
-            $currentBalance = $this->calculateAvailableCapitalBalance((int) $withdraw->shareholder_id);
+            // Amount Validation Guard: must be strictly positive
             $cleanAmount = str_replace(',', '', (string) $withdraw->amount);
             $withdrawAmount = is_numeric($cleanAmount) ? bcadd($cleanAmount, '0', 2) : '0.00';
+            if (bccomp($withdrawAmount, '0.00', 2) <= 0) {
+                return $this->error(
+                    "Cannot approve withdrawal: Withdrawal amount ({$withdrawAmount}) must be greater than zero.",
+                    422
+                );
+            }
+
+            // Financial Balance Verification using BCMath
+            $currentBalance = $this->calculateAvailableCapitalBalance((int) $withdraw->shareholder_id);
             $projectedBalance = bcsub($currentBalance, $withdrawAmount, 2);
 
             if (bccomp($projectedBalance, '0.00', 2) < 0) {
@@ -293,18 +314,19 @@ class InvestmentWithdrawApiController extends ApiController
                 );
             }
 
+            // Conditional Atomic Status Transition to prevent duplicate approvals
+            $adminId = auth()->id() ?? auth('sanctum')->id();
             $now = Carbon::now();
             $affectedRows = DB::table('investment_withdraws')
                 ->where('id', $id)
                 ->where('status', 'pending')
                 ->update([
                     'status'            => 'approved',
-                    'processed_by'      => auth()->id(),
+                    'processed_by'      => $adminId,
                     'processed_at'      => $now,
                     'processed_remarks' => $request->remarks,
                     'updated_at'        => $now,
                 ]);
-
             if ($affectedRows !== 1) {
                 return $this->error(
                     'Withdrawal request could not be approved because its status was already changed by another process.',
@@ -326,8 +348,9 @@ class InvestmentWithdrawApiController extends ApiController
      * Reject a pending capital investment withdrawal request.
      *
      * Enforces:
-     * 1. State machine check: status must currently be 'pending'.
-     * 2. Conditional atomic update: prevents concurrent conflicting updates.
+     * 1. Transaction boundary via DB::transaction.
+     * 2. State machine check: status must currently be 'pending'.
+     * 3. Conditional atomic update: prevents concurrent conflicting updates.
      *
      * @param ProcessWithdrawRequest $request
      * @param int $id
@@ -335,46 +358,49 @@ class InvestmentWithdrawApiController extends ApiController
      */
     public function reject(ProcessWithdrawRequest $request, int $id): JsonResponse
     {
-        $withdraw = InvestmentWithdraw::find($id);
+        return DB::transaction(function () use ($request, $id) {
+            $withdraw = InvestmentWithdraw::find($id);
 
-        if (!$withdraw) {
-            return $this->error('Investment withdrawal request not found', 404);
-        }
+            if (!$withdraw) {
+                return $this->error('Investment withdrawal request not found', 404);
+            }
 
-        // State Machine Guard
-        if ($withdraw->status !== 'pending') {
-            return $this->error(
-                "Cannot reject withdrawal request: Only pending requests can be rejected (current status: {$withdraw->status}).",
-                409
-            );
-        }
+            // State Machine Guard
+            if ($withdraw->status !== 'pending') {
+                return $this->error(
+                    "Cannot reject withdrawal request: Only pending requests can be rejected (current status: {$withdraw->status}).",
+                    409
+                );
+            }
 
-        // Conditional Atomic Status Transition
-        $affectedRows = DB::table('investment_withdraws')
-            ->where('id', $id)
-            ->where('status', 'pending')
-            ->update([
-                'status'            => 'rejected',
-                'processed_by'      => auth()->id(),
-                'processed_at'      => Carbon::now(),
-                'processed_remarks' => $request->remarks,
-                'updated_at'        => Carbon::now(),
-            ]);
+            // Conditional Atomic Status Transition
+            $adminId = auth()->id() ?? auth('sanctum')->id();
+            $affectedRows = DB::table('investment_withdraws')
+                ->where('id', $id)
+                ->where('status', 'pending')
+                ->update([
+                    'status'            => 'rejected',
+                    'processed_by'      => $adminId,
+                    'processed_at'      => Carbon::now(),
+                    'processed_remarks' => $request->remarks,
+                    'updated_at'        => Carbon::now(),
+                ]);
 
-        if ($affectedRows !== 1) {
-            return $this->error(
-                'Withdrawal request could not be rejected because its status was already changed by another process.',
-                409
-            );
-        }
+            if ($affectedRows !== 1) {
+                return $this->error(
+                    'Withdrawal request could not be rejected because its status was already changed by another process.',
+                    409
+                );
+            }
 
-        $withdraw = InvestmentWithdraw::with([
-            'shareholder:id,name,phone,email,designation',
-            'requester:id,name,email',
-            'processor:id,name,email',
-        ])->find($id);
+            $withdraw = InvestmentWithdraw::with([
+                'shareholder:id,name,phone,email,designation',
+                'requester:id,name,email',
+                'processor:id,name,email',
+            ])->find($id);
 
-        return $this->success($withdraw, 'Investment withdrawal request rejected successfully');
+            return $this->success($withdraw, 'Investment withdrawal request rejected successfully');
+        });
     }
 
     /**

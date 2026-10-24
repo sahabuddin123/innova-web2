@@ -36,6 +36,24 @@ class InvestmentWithdraw extends Model
      */
     protected $dates = ['deleted_at'];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['numeric_amount'];
+
+    /**
+     * Accessor for numeric amount as float with 2 decimal precision.
+     *
+     * @return float
+     */
+    public function getNumericAmountAttribute(): float
+    {
+        $clean = str_replace(',', '', (string) ($this->amount ?? 0));
+        return is_numeric($clean) ? (float) bcadd($clean, '0', 2) : 0.0;
+    }
+
 
     /**
      * Accessor for amount in words. Returns stored value if present,
