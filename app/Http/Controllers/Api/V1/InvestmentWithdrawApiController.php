@@ -388,6 +388,7 @@ class InvestmentWithdrawApiController extends ApiController
     {
         $investments = Invesments::where('shareholder_id', $shareholderId)
             ->where('isActive', 1)
+            ->lockForUpdate()
             ->get();
 
         $totalInvestmentStr = '0.00';
@@ -400,6 +401,7 @@ class InvestmentWithdrawApiController extends ApiController
 
         $withdrawals = InvestmentWithdraw::where('shareholder_id', $shareholderId)
             ->whereIn('status', ['approved', '1'])
+            ->lockForUpdate()
             ->get();
 
         $totalWithdrawnStr = '0.00';
