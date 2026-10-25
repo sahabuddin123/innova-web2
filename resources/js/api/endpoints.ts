@@ -53,4 +53,16 @@ export const API_ENDPOINTS = {
     bteb: '/certificates/bteb',
     icbd: '/certificates',
   },
+
+  // Fees Collection & bKash
+  fees: {
+    transactions: '/fees/transactions',
+    transaction: (id: number | string) => `/fees/transactions/${id}`,
+    status: (id: number | string) => `/fees/transactions/${id}/status`,
+    receipt: (id: number | string) => `/fees/transactions/${id}/receipt`,
+    studentBalance: (studentId: number | string) => `/fees/students/${studentId}/balance`,
+    myBalance: '/fees/my-balance',
+    bkashQuery: (paymentId: string) => `/fees/bkash/query/${paymentId}`,
+    bkashSearch: (trxId: string) => `/fees/bkash/search/${trxId}`,
+  },
 } as const;

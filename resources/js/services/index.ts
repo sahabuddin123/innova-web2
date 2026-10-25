@@ -4,3 +4,4 @@ export * from './batchService';
 export * from './studentService';
 export * from './admissionService';
 export * from './certificateService';
+export * from './feeService';

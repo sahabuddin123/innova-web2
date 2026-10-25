@@ -7,3 +7,4 @@ export * from './batches';
 export * from './students';
 export * from './admissions';
 export * from './certificates';
+export * from './fees';
