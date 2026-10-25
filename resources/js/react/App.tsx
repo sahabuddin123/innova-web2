@@ -3,19 +3,13 @@ import { get, API_ENDPOINTS } from '../api';
 import { ApiPingData } from '../types/api';
 import { getApiBaseUrl } from '../utils/env';
 import { Card, Alert, LoadingSpinner } from '../components/common';
+import { AuthProvider } from '../context/AuthContext';
+import { AuthDemo } from '../components/auth/AuthDemo';
 
 /**
- * INNOVA WEB — React Foundation Health & Setup Verification Component (Phase 3.0)
- *
- * Demonstrates:
- * 1. React 18 createRoot mounting
- * 2. StrictMode execution
- * 3. Dynamic API base URL resolution
- * 4. Typed API calls with Axios interceptors
- * 5. Clean state management (loading, data, error)
- * 6. Isolated mount with zero disruption to existing Blade modules
+ * Main application content rendered within AuthProvider context.
  */
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [pingData, setPingData] = useState<ApiPingData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +30,15 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Initial health check on mount
     handleTestPing();
   }, []);
 
   return (
-    <div style={{ maxWidth: '900px', margin: '2rem auto', padding: '0 1rem' }}>
+    <div style={{ maxWidth: '960px', margin: '2rem auto', padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Phase 3.1: React Authentication & Access Foundation Demonstration Mount */}
+      <AuthDemo />
+
+      {/* Phase 3.0: Dual-Engine Architecture & API Ping Verification Mount */}
       <Card
         title="INNOVA Computers BD — React Frontend Foundation"
         subtitle="Phase 3.0: Setup Only — Dual-Engine Architecture Verification"
@@ -83,7 +80,7 @@ export const App: React.FC = () => {
 
           <div className="innova-stat-box">
             <div className="innova-stat-label">Type System</div>
-            <div className="innova-stat-value">TypeScript 5</div>
+            <div className="innova-stat-value">TypeScript 5/7</div>
             <span className="innova-badge innova-badge-primary" style={{ marginTop: '0.5rem' }}>
               Type-Safe Envelopes
             </span>
@@ -127,5 +124,16 @@ export const App: React.FC = () => {
         </div>
       </Card>
     </div>
+  );
+};
+
+/**
+ * Root Application component wrapping content with AuthProvider.
+ */
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };

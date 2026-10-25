@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { getApiBaseUrl, getCsrfToken, getAuthToken } from '../utils/env';
+import { getApiBaseUrl, getCsrfToken, getAuthToken, clearAuthToken } from '../utils/env';
 import { ApiResponse, ApiErrorResponse } from '../types/api';
 
 /**
@@ -43,16 +43,29 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Standardize error envelopes
+// Response Interceptor: Standardize error envelopes & handle session expiry
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
   (error: AxiosError<ApiErrorResponse>) => {
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+
+    // Handle session expiry or unauthorized token revocation on protected endpoints
+    // (Do not trigger session cleanup during login attempt itself when credentials fail)
+    if (status === 401 && !url.includes('/login')) {
+      clearAuthToken();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('innova:auth-unauthorized', { detail: { status } }));
+      }
+    }
+
     const errorResponse: ApiErrorResponse = {
       success: false,
-      message: error.response?.data?.message || error.message || 'An unexpected error occurred.',
+      message: error.response?.data?.message || (status === 401 ? 'Session expired or unauthenticated.' : (error.message || 'An unexpected error occurred.')),
       errors: error.response?.data?.errors ?? null,
+      status: status,
     };
 
     return Promise.reject(errorResponse);
