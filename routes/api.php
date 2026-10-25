@@ -388,6 +388,41 @@ Route::prefix('v1')->group(function () {
         Route::post('/withdrawals/dividend/{id}/reject', [\App\Http\Controllers\Api\V1\DividendWithdrawApiController::class, 'reject'])
             ->name('api.v1.withdrawals.dividend.reject');
     });
+
+    // =========================================================================
+    // BANK LOANS & EMI ROUTES (Phase 2.7.3)
+    // =========================================================================
+    Route::middleware(['auth:sanctum', 'admin.identity'])->group(function () {
+        // Bank Loans Management
+        Route::get('/loans/bank-loans', [\App\Http\Controllers\Api\V1\BankLoanApiController::class, 'index'])
+            ->name('api.v1.loans.bank-loans.index');
+        Route::post('/loans/bank-loans', [\App\Http\Controllers\Api\V1\BankLoanApiController::class, 'store'])
+            ->name('api.v1.loans.bank-loans.store');
+        Route::get('/loans/bank-loans/{id}', [\App\Http\Controllers\Api\V1\BankLoanApiController::class, 'show'])
+            ->name('api.v1.loans.bank-loans.show');
+        Route::put('/loans/bank-loans/{id}', [\App\Http\Controllers\Api\V1\BankLoanApiController::class, 'update'])
+            ->name('api.v1.loans.bank-loans.update');
+        Route::delete('/loans/bank-loans/{id}', [\App\Http\Controllers\Api\V1\BankLoanApiController::class, 'destroy'])
+            ->name('api.v1.loans.bank-loans.destroy');
+        Route::get('/loans/bank-loans/{id}/statement', [\App\Http\Controllers\Api\V1\BankLoanApiController::class, 'statement'])
+            ->name('api.v1.loans.bank-loans.statement');
+        Route::post('/loans/bank-loans/{id}/generate-schedule', [\App\Http\Controllers\Api\V1\BankLoanApiController::class, 'generateSchedule'])
+            ->name('api.v1.loans.bank-loans.generate-schedule');
+
+        // EMI Installments Management
+        Route::get('/loans/installments', [\App\Http\Controllers\Api\V1\EmiInstallmentApiController::class, 'index'])
+            ->name('api.v1.loans.installments.index');
+        Route::post('/loans/installments', [\App\Http\Controllers\Api\V1\EmiInstallmentApiController::class, 'store'])
+            ->name('api.v1.loans.installments.store');
+        Route::get('/loans/installments/{id}', [\App\Http\Controllers\Api\V1\EmiInstallmentApiController::class, 'show'])
+            ->name('api.v1.loans.installments.show');
+        Route::put('/loans/installments/{id}', [\App\Http\Controllers\Api\V1\EmiInstallmentApiController::class, 'update'])
+            ->name('api.v1.loans.installments.update');
+        Route::delete('/loans/installments/{id}', [\App\Http\Controllers\Api\V1\EmiInstallmentApiController::class, 'destroy'])
+            ->name('api.v1.loans.installments.destroy');
+        Route::post('/loans/installments/{id}/pay', [\App\Http\Controllers\Api\V1\EmiInstallmentApiController::class, 'pay'])
+            ->name('api.v1.loans.installments.pay');
+    });
 });
 
 

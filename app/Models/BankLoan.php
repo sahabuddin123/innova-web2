@@ -26,6 +26,34 @@ class BankLoan extends Model
 
     protected $dates = ['deleted_at', 'loan_date', 'maturity_date'];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'numeric_loan_amount',
+        'numeric_savings_amount',
+    ];
+
+    /**
+     * Accessor for numeric loan amount.
+     */
+    public function getNumericLoanAmountAttribute(): float
+    {
+        $clean = str_replace(',', '', (string) $this->loan_amount);
+        return is_numeric($clean) ? (float) bcadd($clean, '0', 2) : 0.0;
+    }
+
+    /**
+     * Accessor for numeric savings amount.
+     */
+    public function getNumericSavingsAmountAttribute(): float
+    {
+        $clean = str_replace(',', '', (string) ($this->savings_amount ?? '0'));
+        return is_numeric($clean) ? (float) bcadd($clean, '0', 2) : 0.0;
+    }
+
     public function shareholder()
     {
         return $this->belongsTo(Shareholder::class, 'shareholder_id');
@@ -51,54 +79,116 @@ class BankLoan extends Model
         return $this->emiInstallments()->where('status', 'pending');
     }
 
-    public function totalEmiPaid()
+    /**
+     * Total paid EMI amount calculated with BCMath.
+     *
+     * @return string
+     */
+    public function totalEmiPaid(): string
     {
-        return $this->paidInstallments()->sum('emi_amount');
-    }
-
-    public function totalSavings()
-    {
-        // Sum of savings from EMI payments
-        $emiSavings = $this->paidInstallments()->sum('savings_amount');
-        // Add initial loan savings amount
-        $loanSavings = $this->savings_amount ?? 0;
-        return $emiSavings + $loanSavings;
+        $total = '0.00';
+        $paid = $this->paidInstallments()->get();
+        foreach ($paid as $inst) {
+            $clean = str_replace(',', '', (string) $inst->emi_amount);
+            if (is_numeric($clean)) {
+                $total = bcadd($total, $clean, 2);
+            }
+        }
+        return $total;
     }
 
     /**
-     * Get monthly savings from EMI payments only
+     * Total savings calculated with BCMath (initial loan savings + paid installments savings).
+     *
+     * @return string
      */
-    public function getMonthlyEmiSavings()
+    public function totalSavings(): string
     {
-        return $this->paidInstallments()->sum('savings_amount');
+        $cleanLoanSavings = str_replace(',', '', (string) ($this->savings_amount ?? '0'));
+        $total = is_numeric($cleanLoanSavings) ? bcadd($cleanLoanSavings, '0', 2) : '0.00';
+        $paid = $this->paidInstallments()->get();
+        foreach ($paid as $inst) {
+            $clean = str_replace(',', '', (string) ($inst->savings_amount ?? '0'));
+            if (is_numeric($clean)) {
+                $total = bcadd($total, $clean, 2);
+            }
+        }
+        return $total;
     }
 
     /**
-     * Get loan's initial savings amount
+     * Get monthly savings from EMI payments only.
+     *
+     * @return string
      */
-    public function getMonthlySavingsAmount()
+    public function getMonthlyEmiSavings(): string
     {
-        return $this->savings_amount;
+        $total = '0.00';
+        $paid = $this->paidInstallments()->get();
+        foreach ($paid as $inst) {
+            $clean = str_replace(',', '', (string) ($inst->savings_amount ?? '0'));
+            if (is_numeric($clean)) {
+                $total = bcadd($total, $clean, 2);
+            }
+        }
+        return $total;
     }
 
     /**
-     * Calculate total interest on the loan
-     * Interest = (Loan Amount * Interest Rate * Loan Term in years) / 100
+     * Get loan's initial savings amount.
+     *
+     * @return string
      */
-    public function calculateTotalInterest()
+    public function getMonthlySavingsAmount(): string
     {
-        $loanYears = $this->loan_term_months / 12;
-        return ($this->loan_amount * $this->interest_rate * $loanYears) / 100;
+        $clean = str_replace(',', '', (string) ($this->savings_amount ?? '0'));
+        return is_numeric($clean) ? bcadd($clean, '0', 2) : '0.00';
     }
 
     /**
-     * Calculate remaining EMI amount with interest
-     * Remaining = Loan Amount + Total Interest - EMI Paid
+     * Calculate total interest on the loan with BCMath.
+     * Interest = (Loan Amount * Interest Rate * Months) / 1200
+     *
+     * @return string
      */
-    public function remainingEmi()
+    public function calculateTotalInterest(): string
     {
-        $totalInterest = $this->calculateTotalInterest();
-        $totalLoanWithInterest = $this->loan_amount + $totalInterest;
-        return $totalLoanWithInterest - $this->totalEmiPaid();
+        $cleanAmount = str_replace(',', '', (string) $this->loan_amount);
+        $amount = is_numeric($cleanAmount) ? bcadd($cleanAmount, '0', 4) : '0.0000';
+        $cleanRate = str_replace(',', '', (string) $this->interest_rate);
+        $rate = is_numeric($cleanRate) ? bcadd($cleanRate, '0', 4) : '0.0000';
+        $months = (int) $this->loan_term_months;
+
+        if ($months <= 0 || bccomp($amount, '0.0000', 4) <= 0 || bccomp($rate, '0.0000', 4) <= 0) {
+            return '0.00';
+        }
+
+        $numerator = bcmul(bcmul($amount, $rate, 4), (string) $months, 4);
+        return bcdiv($numerator, '1200', 2);
+    }
+
+    /**
+     * Calculate total loan payable amount (Principal + Total Interest).
+     *
+     * @return string
+     */
+    public function calculateTotalPayable(): string
+    {
+        $cleanAmount = str_replace(',', '', (string) $this->loan_amount);
+        $amount = is_numeric($cleanAmount) ? bcadd($cleanAmount, '0', 2) : '0.00';
+        return bcadd($amount, $this->calculateTotalInterest(), 2);
+    }
+
+    /**
+     * Calculate remaining EMI amount with interest.
+     * Remaining = Total Loan With Interest - Total EMI Paid
+     *
+     * @return string
+     */
+    public function remainingEmi(): string
+    {
+        $totalLoanWithInterest = $this->calculateTotalPayable();
+        $diff = bcsub($totalLoanWithInterest, $this->totalEmiPaid(), 2);
+        return bccomp($diff, '0.00', 2) > 0 ? $diff : '0.00';
     }
 }

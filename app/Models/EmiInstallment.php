@@ -25,6 +25,34 @@ class EmiInstallment extends Model
 
     protected $dates = ['deleted_at', 'payment_date', 'paid_at'];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'numeric_emi_amount',
+        'numeric_savings_amount',
+    ];
+
+    /**
+     * Accessor for numeric EMI amount.
+     */
+    public function getNumericEmiAmountAttribute(): float
+    {
+        $clean = str_replace(',', '', (string) $this->emi_amount);
+        return is_numeric($clean) ? (float) bcadd($clean, '0', 2) : 0.0;
+    }
+
+    /**
+     * Accessor for numeric savings amount.
+     */
+    public function getNumericSavingsAmountAttribute(): float
+    {
+        $clean = str_replace(',', '', (string) ($this->savings_amount ?? '0'));
+        return is_numeric($clean) ? (float) bcadd($clean, '0', 2) : 0.0;
+    }
+
     public function bankLoan()
     {
         return $this->belongsTo(BankLoan::class, 'bank_loan_id');

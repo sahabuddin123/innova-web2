@@ -42,6 +42,16 @@ class Shareholder extends Model
         return $this->belongsTo(Invesments::class, 'shareholder_id');
     }
 
+    public function bankLoans()
+    {
+        return $this->hasMany(BankLoan::class, 'shareholder_id');
+    }
+
+    public function emiInstallments()
+    {
+        return $this->hasMany(EmiInstallment::class, 'shareholder_id');
+    }
+
     /**
      * Accessor: Calculate total investment amount for this shareholder
      */
