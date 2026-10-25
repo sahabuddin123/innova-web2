@@ -10,6 +10,7 @@ import {
   BatchListPage,
   StudentListPage,
   AdmissionListPage,
+  CertificateListPage,
 } from '../pages/admin';
 import { Card, Alert } from '../components/common';
 
@@ -53,14 +54,15 @@ export const AdminRoutes: React.FC = () => {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="access-denied" element={<AccessDeniedPage />} />
 
-        {/* Migrated Academic & Student Interfaces (Phase 3.3, 3.4 & 3.5) */}
+        {/* Migrated Academic & Student Interfaces (Phase 3.3, 3.4, 3.5 & 3.6) */}
         <Route path="courses" element={<CourseListPage />} />
         <Route path="batches" element={<BatchListPage />} />
         <Route path="students" element={<StudentListPage />} />
         <Route path="admissions" element={<AdmissionListPage />} />
+        <Route path="certificates" element={<CertificateListPage />} />
         <Route
           path="accounting"
-          element={<PlaceholderModule name="Accounts & Institutional Ledgers" phase="Phase 3.6" />}
+          element={<PlaceholderModule name="Accounts & Institutional Ledgers" phase="Phase 3.7" />}
         />
         <Route
           path="roles"
@@ -68,7 +70,7 @@ export const AdminRoutes: React.FC = () => {
         />
         <Route
           path="settings"
-          element={<PlaceholderModule name="SMS Gateway & System Settings" phase="Phase 3.6" />}
+          element={<PlaceholderModule name="SMS Gateway & System Settings" phase="Phase 3.7" />}
         />
 
         {/* Catch-all 404 within Admin route namespace */}
