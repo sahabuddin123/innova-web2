@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
     batches: '/academic/batches',
     teachers: '/academic/teachers',
     students: '/academic/students',
+    admissions: '/academic/admissions',
   },
 
   // System Settings

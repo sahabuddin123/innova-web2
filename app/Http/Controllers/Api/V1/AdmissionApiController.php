@@ -27,13 +27,17 @@ class AdmissionApiController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $query = Admission::whereNull('deleted_at')
-            ->with(['course:id,name,shortTitle']);
+            ->with(['course:id,name,shortTitle,coursefee']);
 
         if ($request->filled('courseId')) {
             $query->where('courseId', (int) $request->input('courseId'));
         }
 
-        if ($request->has('isActive')) {
+        if ($request->has('courseType') && $request->input('courseType') !== '' && $request->input('courseType') !== null && $request->input('courseType') !== 'all') {
+            $query->where('courseType', (int) $request->input('courseType'));
+        }
+
+        if ($request->has('isActive') && $request->input('isActive') !== '' && $request->input('isActive') !== null && $request->input('isActive') !== 'all') {
             $query->where('isActive', (int) $request->input('isActive'));
         }
 
@@ -111,6 +115,7 @@ class AdmissionApiController extends ApiController
         }
 
         $admission->update($request->validated());
+        $admission->load(['course']);
 
         return $this->success($admission, 'Admission record updated successfully');
     }

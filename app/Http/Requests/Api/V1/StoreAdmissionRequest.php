@@ -22,7 +22,7 @@ class StoreAdmissionRequest extends ApiRequest
             'username'   => 'required|string|max:191',
             'phone'      => 'required|string|max:50|unique:admissions,phone',
             'courseId'   => 'required|integer|exists:courses,id',
-            'courseType' => 'required|integer',
+            'courseType' => 'required|integer|in:0,1',
             'email'      => 'nullable|email|max:191',
         ];
     }

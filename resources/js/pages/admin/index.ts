@@ -5,3 +5,4 @@ export * from './NotFoundPage';
 export * from './courses';
 export * from './batches';
 export * from './students';
+export * from './admissions';

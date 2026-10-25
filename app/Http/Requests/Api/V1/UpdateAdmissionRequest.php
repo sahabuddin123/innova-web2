@@ -22,9 +22,9 @@ class UpdateAdmissionRequest extends ApiRequest
             'username'   => 'sometimes|required|string|max:191',
             'phone'      => 'sometimes|required|string|max:50',
             'courseId'   => 'sometimes|required|integer|exists:courses,id',
-            'courseType' => 'sometimes|required|integer',
+            'courseType' => 'sometimes|required|integer|in:0,1',
             'email'      => 'nullable|email|max:191',
-            'isActive'   => 'nullable|integer|in:0,1',
+            'isActive'   => 'nullable|integer|in:0,1,2,3,4,5,6',
         ];
     }
 }
