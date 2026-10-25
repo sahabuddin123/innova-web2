@@ -27,6 +27,10 @@ class BatchApiController extends ApiController
     {
         $query = Batchs::whereNull('deleted_at');
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('teachers')) {
+            $query->with('teacher');
+        }
+
         if ($request->has('is_active')) {
             $query->where('IsActive', (int) $request->input('is_active'));
         } elseif ($request->filled('status')) {
@@ -66,7 +70,13 @@ class BatchApiController extends ApiController
      */
     public function show($id): JsonResponse
     {
-        $batch = Batchs::whereNull('deleted_at')->find($id);
+        $query = Batchs::whereNull('deleted_at');
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('teachers')) {
+            $query->with('teacher');
+        }
+
+        $batch = $query->find($id);
 
         if (!$batch) {
             return $this->error('Academic batch not found', 404);

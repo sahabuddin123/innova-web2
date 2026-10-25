@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
     courses: '/academic/courses',
     sessions: '/academic/sessions',
     batches: '/academic/batches',
+    teachers: '/academic/teachers',
     students: '/academic/students',
   },
 

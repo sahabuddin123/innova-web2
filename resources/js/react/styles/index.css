@@ -305,6 +305,268 @@
   to { transform: translateX(0); }
 }
 
+/* Buttons Extra */
+.innova-btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.innova-btn-danger {
+  background-color: var(--innova-error);
+  color: #ffffff;
+}
+
+.innova-btn-danger:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.innova-btn-secondary {
+  background-color: var(--innova-gray-100);
+  color: var(--innova-gray-700);
+  border-color: var(--innova-gray-300);
+}
+
+.innova-btn-secondary:hover:not(:disabled) {
+  background-color: var(--innova-gray-200);
+}
+
+/* Badges Extra */
+.innova-badge-error {
+  background-color: var(--innova-error-light);
+  color: #991b1b;
+}
+
+.innova-badge-warning {
+  background-color: var(--innova-warning-light);
+  color: #92400e;
+}
+
+.innova-badge-gray {
+  background-color: var(--innova-gray-100);
+  color: var(--innova-gray-600);
+}
+
+/* Tables */
+.innova-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--innova-gray-200);
+  border-radius: var(--innova-radius-md);
+  background-color: var(--innova-card-bg, #ffffff);
+}
+
+.innova-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.innova-table th {
+  padding: 0.75rem 1rem;
+  background-color: var(--innova-gray-50);
+  color: var(--innova-gray-600);
+  font-weight: 600;
+  border-bottom: 1px solid var(--innova-gray-200);
+  white-space: nowrap;
+}
+
+.innova-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--innova-gray-100);
+  color: var(--innova-gray-800);
+  vertical-align: middle;
+}
+
+.innova-table tr:hover td {
+  background-color: var(--innova-gray-50);
+}
+
+/* Forms */
+.innova-form-group {
+  margin-bottom: 1rem;
+}
+
+.innova-form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--innova-gray-700);
+}
+
+.innova-form-control {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--innova-gray-300);
+  border-radius: var(--innova-radius-md);
+  background-color: var(--innova-card-bg, #ffffff);
+  color: var(--innova-gray-900);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.innova-form-control:focus {
+  outline: none;
+  border-color: var(--innova-primary);
+  box-shadow: 0 0 0 3px var(--innova-primary-light);
+}
+
+.innova-form-error {
+  color: var(--innova-error);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.innova-form-hint {
+  color: var(--innova-gray-500);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Modals */
+.innova-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+  animation: innovaFadeIn 0.15s ease-out;
+}
+
+.innova-modal {
+  background-color: var(--innova-card-bg, #ffffff);
+  border-radius: var(--innova-radius-lg);
+  border: 1px solid var(--innova-gray-200);
+  box-shadow: var(--innova-shadow-lg);
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: innovaFadeIn 0.2s ease-out;
+}
+
+.innova-modal-lg {
+  max-width: 860px;
+}
+
+.innova-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--innova-gray-200);
+  background-color: var(--innova-gray-50);
+}
+
+.innova-modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--innova-gray-900);
+}
+
+.innova-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.innova-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--innova-gray-200);
+  background-color: var(--innova-gray-50);
+}
+
+/* Tabs */
+.innova-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--innova-gray-200);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+}
+
+.innova-tab {
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--innova-gray-500);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.innova-tab:hover {
+  color: var(--innova-primary);
+}
+
+.innova-tab-active {
+  color: var(--innova-primary);
+  border-bottom-color: var(--innova-primary);
+}
+
+/* Dark Mode Overrides for Academic UI */
+#react-root[data-theme="dark"] .innova-table-container {
+  border-color: var(--innova-gray-200);
+  background-color: var(--innova-card-bg);
+}
+
+#react-root[data-theme="dark"] .innova-table th {
+  background-color: #1e293b;
+  border-color: var(--innova-gray-200);
+  color: var(--innova-gray-600);
+}
+
+#react-root[data-theme="dark"] .innova-table td {
+  border-color: var(--innova-gray-200);
+  color: var(--innova-gray-800);
+}
+
+#react-root[data-theme="dark"] .innova-table tr:hover td {
+  background-color: #1e293b;
+}
+
+#react-root[data-theme="dark"] .innova-modal {
+  background-color: var(--innova-card-bg);
+  border-color: var(--innova-gray-200);
+}
+
+#react-root[data-theme="dark"] .innova-modal-header,
+#react-root[data-theme="dark"] .innova-modal-footer {
+  background-color: #1e293b;
+  border-color: var(--innova-gray-200);
+}
+
+#react-root[data-theme="dark"] .innova-form-control {
+  background-color: #0f172a;
+  border-color: var(--innova-gray-300);
+  color: #f8fafc;
+}
+
+#react-root[data-theme="dark"] .innova-form-control:focus {
+  border-color: var(--innova-primary);
+}
+
+#react-root[data-theme="dark"] .innova-tabs {
+  border-color: var(--innova-gray-200);
+}
+
 /* Responsive Shell Breakpoints */
 @media (min-width: 768px) {
   .innova-mobile-menu-btn {
@@ -323,4 +585,5 @@
     padding: 1rem !important;
   }
 }
+
 

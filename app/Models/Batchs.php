@@ -44,4 +44,12 @@ class Batchs extends Model
     {
         return $this->hasMany(Students::class, 'batch_id');
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function teacher()
+    {
+        return $this->belongsTo(Teachers::class, 'stuff_id', 'id');
+    }
 }

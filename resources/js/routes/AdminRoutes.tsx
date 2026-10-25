@@ -6,6 +6,8 @@ import {
   ProfilePage,
   AccessDeniedPage,
   NotFoundPage,
+  CourseListPage,
+  BatchListPage,
 } from '../pages/admin';
 import { Card, Alert } from '../components/common';
 
@@ -28,8 +30,7 @@ const PlaceholderModule: React.FC<{ name: string; phase: string }> = ({ name, ph
 
       <Card title={`Module Scheduled for ${phase}`} subtitle="Incremental modernization plan">
         <Alert type="info" title="Under Modernization">
-          In strict compliance with Phase 3.2 scope boundaries, no business modules have been migrated yet.
-          This module is operational in production via the existing Blade admin interface and will be migrated in <strong>{phase}</strong>.
+          In strict compliance with modernization scope boundaries, this module is operational in production via the existing Blade admin interface and will be migrated in <strong>{phase}</strong>.
         </Alert>
 
         <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--innova-gray-600)' }}>
@@ -50,15 +51,9 @@ export const AdminRoutes: React.FC = () => {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="access-denied" element={<AccessDeniedPage />} />
 
-        {/* Representative placeholder routes for upcoming phases */}
-        <Route
-          path="courses"
-          element={<PlaceholderModule name="Courses & Academic Catalogs" phase="Phase 3.3" />}
-        />
-        <Route
-          path="batches"
-          element={<PlaceholderModule name="Batches & Academic Terms" phase="Phase 3.3" />}
-        />
+        {/* Migrated Academic Interfaces (Phase 3.3) */}
+        <Route path="courses" element={<CourseListPage />} />
+        <Route path="batches" element={<BatchListPage />} />
         <Route
           path="students"
           element={<PlaceholderModule name="Student Directory & Admissions" phase="Phase 3.4" />}

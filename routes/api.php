@@ -58,6 +58,9 @@ Route::prefix('v1')->group(function () {
 
     // Academic & Course Management Routes
     Route::prefix('academic')->group(function () {
+        // Teachers / Instructors (Read-only for academic assignment dropdowns)
+        Route::get('/teachers', [\App\Http\Controllers\Api\V1\TeacherApiController::class, 'index'])->name('api.v1.academic.teachers.index');
+
         // Course Categories
         Route::get('/categories', [\App\Http\Controllers\Api\V1\CourseCategoryApiController::class, 'index'])->name('api.v1.academic.categories.index');
         Route::get('/categories/{id}', [\App\Http\Controllers\Api\V1\CourseCategoryApiController::class, 'show'])->name('api.v1.academic.categories.show');
