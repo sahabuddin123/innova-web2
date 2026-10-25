@@ -153,8 +153,14 @@ if (env('APP_DEBUG')) {
     });
 }
 
+// React Foundation Verification Route (Phase 3.0 Setup Only)
+Route::get('/react-health', function () {
+    return view('react-health');
+})->name('react.health');
+
 Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
     Route::resource('clients', 'Admin\\ClientController');
     Route::resource('technologies', 'Admin\\TechnologyController');
     Route::resource('teams', 'Admin\\TeamController');
 });
+

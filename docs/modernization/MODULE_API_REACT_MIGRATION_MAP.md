@@ -142,9 +142,10 @@ The database migration from MySQL 8.0 to PostgreSQL 16 will take place only **af
 - [ ] Establish automated Feature testing for every newly authored API route.
 
 ### Prerequisites for Phase 3 (React + TypeScript):
-- [ ] Initialize Vite + React + TypeScript build environment.
-- [ ] Establish global state management (e.g., Zustand or TanStack Query) and Axios interceptor for JWT/bearer tokens.
-- [ ] Design System / UI Component library (TailwindCSS or modular CSS) ensuring mobile responsiveness and print layout support.
+- [x] Initialize Vite 8 + React 18 + TypeScript build environment (`vite.config.ts`, `tsconfig.json`) in parallel with Laravel Mix 4 (Phase 3.0).
+- [x] Establish typed API client and Axios interceptors for CSRF / Bearer tokens and dynamic base URL resolution (`resources/js/api/client.ts`, `resources/js/utils/env.ts`) (Phase 3.0).
+- [x] Establish Design System CSS tokens, foundational utilities, and isolated verification mount (`/react-health`) with automated tests passing (Phase 3.0).
+- [ ] Implement client-side routing and module-by-module React SPA components (Scheduled for subsequent Phase 3 subphases).
 
 ### Prerequisites for Phase 4 (PostgreSQL Migration):
 - [ ] Complete approval of Owner Decision Gates 1 through 8.
