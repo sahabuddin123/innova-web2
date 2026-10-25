@@ -8,6 +8,7 @@ import {
   NotFoundPage,
   CourseListPage,
   BatchListPage,
+  StudentListPage,
 } from '../pages/admin';
 import { Card, Alert } from '../components/common';
 
@@ -51,13 +52,10 @@ export const AdminRoutes: React.FC = () => {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="access-denied" element={<AccessDeniedPage />} />
 
-        {/* Migrated Academic Interfaces (Phase 3.3) */}
+        {/* Migrated Academic & Student Interfaces (Phase 3.3 & 3.4) */}
         <Route path="courses" element={<CourseListPage />} />
         <Route path="batches" element={<BatchListPage />} />
-        <Route
-          path="students"
-          element={<PlaceholderModule name="Student Directory & Admissions" phase="Phase 3.4" />}
-        />
+        <Route path="students" element={<StudentListPage />} />
         <Route
           path="accounting"
           element={<PlaceholderModule name="Accounts & Institutional Ledgers" phase="Phase 3.5" />}

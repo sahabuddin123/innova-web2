@@ -34,8 +34,8 @@ class StudentApiController extends ApiController
                 'batch:id,batchnum',
             ]);
 
-        if ($request->filled('q')) {
-            $search = $request->input('q');
+        $search = $request->input('search', $request->input('q'));
+        if (!empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('sname', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%");
@@ -52,12 +52,26 @@ class StudentApiController extends ApiController
 
         if ($request->filled('is_active')) {
             $query->where('IsActive', (int) $request->input('is_active'));
+        } elseif ($request->filled('status')) {
+            $statusMap = [
+                'active'     => 1,
+                'regular'    => 1,
+                'irregular'  => 2,
+                'complete'   => 3,
+                'completed'  => 3,
+                'restricted' => 4,
+                'postponed'  => 5,
+            ];
+            $status = strtolower($request->input('status'));
+            if (array_key_exists($status, $statusMap)) {
+                $query->where('IsActive', $statusMap[$status]);
+            }
         }
 
         $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
         $paginated = $query->select([
-            'id', 'user_id', 'sname', 'gender', 'phone', 'batch_id', 'course_id',
-            'course_fee', 'balance', 'IsActive', 'IsRegister', 'admission_date', 'created_at'
+            'id', 'user_id', 'sname', 'gender', 'phone', 'image', 'batch_id', 'course_id',
+            'course_fee', 'discount', 'balance', 'IsActive', 'IsRegister', 'admission_date', 'created_at'
         ])->orderBy('id', 'desc')->paginate($perPage);
 
         return $this->success($paginated->items(), 'Students retrieved successfully', 200, [
@@ -78,9 +92,14 @@ class StudentApiController extends ApiController
      */
     public function show(Request $request, $id): JsonResponse
     {
-        $student = Students::whereNull('deleted_at')
-            ->with(['course', 'batch'])
-            ->find($id);
+        $query = Students::whereNull('deleted_at')
+            ->with(['course', 'batch']);
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('fees_transections')) {
+            $query->with('latestPayment');
+        }
+
+        $student = $query->find($id);
 
         if (!$student) {
             return $this->error('Student record not found', 404);
