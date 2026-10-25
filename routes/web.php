@@ -158,6 +158,11 @@ Route::get('/react-health', function () {
     return view('react-health');
 })->name('react.health');
 
+// React Admin Application Shell Route (Phase 3.2 Isolated Shell)
+Route::get('/react-admin/{any?}', function () {
+    return view('react-admin');
+})->where('any', '.*')->name('react.admin');
+
 Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
     Route::resource('clients', 'Admin\\ClientController');
     Route::resource('technologies', 'Admin\\TechnologyController');

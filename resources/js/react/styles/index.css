@@ -254,3 +254,73 @@
   font-weight: 700;
   color: var(--innova-gray-900);
 }
+
+/* Shell Layout & Theme Variables */
+:root {
+  --innova-sidebar-width: 260px;
+  --innova-sidebar-collapsed-width: 72px;
+  --innova-header-height: 64px;
+  --innova-bg-page: #f8fafc;
+  --innova-card-bg: #ffffff;
+  --innova-header-bg: #ffffff;
+  --innova-sidebar-bg: #ffffff;
+}
+
+#react-root[data-theme="dark"] {
+  --innova-bg-page: #0f172a;
+  --innova-card-bg: #1e293b;
+  --innova-header-bg: #1e293b;
+  --innova-sidebar-bg: #0f172a;
+  --innova-gray-50: #1e293b;
+  --innova-gray-100: #1e293b;
+  --innova-gray-200: #334155;
+  --innova-gray-300: #475569;
+  --innova-gray-400: #64748b;
+  --innova-gray-500: #94a3b8;
+  --innova-gray-600: #cbd5e1;
+  --innova-gray-700: #e2e8f0;
+  --innova-gray-800: #f1f5f9;
+  --innova-gray-900: #f8fafc;
+}
+
+#react-root[data-theme="dark"] .innova-card {
+  background-color: var(--innova-card-bg);
+  border-color: var(--innova-gray-200);
+}
+
+#react-root[data-theme="dark"] .innova-card-header,
+#react-root[data-theme="dark"] .innova-card-footer {
+  background-color: #1e293b;
+  border-color: var(--innova-gray-200);
+}
+
+/* Animations */
+@keyframes innovaFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes innovaSlideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+/* Responsive Shell Breakpoints */
+@media (min-width: 768px) {
+  .innova-mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .innova-admin-sidebar {
+    display: none !important;
+  }
+  .innova-mobile-menu-btn {
+    display: flex !important;
+  }
+  .innova-admin-content {
+    padding: 1rem !important;
+  }
+}
+

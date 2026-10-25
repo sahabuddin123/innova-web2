@@ -146,7 +146,8 @@ The database migration from MySQL 8.0 to PostgreSQL 16 will take place only **af
 - [x] Establish typed API client and Axios interceptors for CSRF / Bearer tokens and dynamic base URL resolution (`resources/js/api/client.ts`, `resources/js/utils/env.ts`) (Phase 3.0).
 - [x] Establish Design System CSS tokens, foundational utilities, and isolated verification mount (`/react-health`) with automated tests passing (Phase 3.0).
 - [x] Establish typed React Authentication & Access Foundation (`authService.ts`, `AuthContext.tsx`, `useAuth.ts`, `AuthBoundary.tsx`) consuming existing Sanctum multi-guard APIs with token/storage hardening (Phase 3.1).
-- [ ] Implement client-side routing and module-by-module React SPA components (Scheduled for subsequent Phase 3 subphases).
+- [x] Implement React Admin Application Shell (`AdminLayout`, `AdminSidebar`, `AdminHeader`, `AdminBreadcrumbs`, `AdminNavigation`, `MobileNavigation`, `ThemeToggle`, `AdminRoutes`) mounted at isolated `/react-admin/*` with role-aware item visibility and SPA client routing (Phase 3.2).
+- [ ] Implement module-by-module React SPA components (Courses, Batches, Students, Fees, Accounting, Certificates, SMS) (Scheduled for Phase 3.3+).
 
 ### Prerequisites for Phase 4 (PostgreSQL Migration):
 - [ ] Complete approval of Owner Decision Gates 1 through 8.

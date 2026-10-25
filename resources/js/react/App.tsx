@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import { get, API_ENDPOINTS } from '../api';
 import { ApiPingData } from '../types/api';
 import { getApiBaseUrl } from '../utils/env';
 import { Card, Alert, LoadingSpinner } from '../components/common';
 import { AuthProvider } from '../context/AuthContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { AuthDemo } from '../components/auth/AuthDemo';
+import { AdminRoutes } from '../routes/AdminRoutes';
 
 /**
- * Main application content rendered within AuthProvider context.
+ * Diagnostics and Health Verification Content (/react-health)
  */
-const AppContent: React.FC = () => {
+const HealthVerificationContent: React.FC = () => {
   const [pingData, setPingData] = useState<ApiPingData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +38,26 @@ const AppContent: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '960px', margin: '2rem auto', padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Shell Launch Banner */}
+      <Card
+        title="React Admin Application Shell (Phase 3.2)"
+        subtitle="Dedicated SPA Shell mounted at /react-admin"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--innova-gray-500)' }}>
+              Target Namespace: <code>/react-admin/*</code>
+            </span>
+            <a href="/react-admin/dashboard" className="innova-btn innova-btn-primary">
+              Launch React Admin Shell &rarr;
+            </a>
+          </div>
+        }
+      >
+        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--innova-gray-700)' }}>
+          The React Admin Application Shell provides responsive navigation, theme toggling, Spatie role-aware item filtering, breadcrumbs, and client-side routing on top of Laravel Sanctum authentication.
+        </p>
+      </Card>
+
       {/* Phase 3.1: React Authentication & Access Foundation Demonstration Mount */}
       <AuthDemo />
 
@@ -128,12 +151,26 @@ const AppContent: React.FC = () => {
 };
 
 /**
- * Root Application component wrapping content with AuthProvider.
+ * Root Application component.
+ * Automatically resolves between dedicated /react-admin routing and /react-health diagnostics.
  */
 export const App: React.FC = () => {
+  const isDedicatedAdmin = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/react-admin') ||
+    document.getElementById('react-root')?.getAttribute('data-app-mode') === 'admin'
+  );
+
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        {isDedicatedAdmin ? (
+          <BrowserRouter basename="/react-admin">
+            <AdminRoutes />
+          </BrowserRouter>
+        ) : (
+          <HealthVerificationContent />
+        )}
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
