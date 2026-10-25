@@ -423,6 +423,65 @@ Route::prefix('v1')->group(function () {
         Route::post('/loans/installments/{id}/pay', [\App\Http\Controllers\Api\V1\EmiInstallmentApiController::class, 'pay'])
             ->name('api.v1.loans.installments.pay');
     });
+
+    // =========================================================================
+    // ASSET / SEIP GOVERNMENT PROJECTS ROUTES (Phase 2.7.4)
+    // =========================================================================
+    // Public online candidate intake
+    Route::post('/projects/public-register', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'publicRegister'])
+        ->name('api.v1.projects.public-register');
+
+    Route::middleware(['auth:sanctum', 'admin.identity'])->group(function () {
+        // Project Overview & Summary Reporting
+        Route::get('/projects/reports/summary', [\App\Http\Controllers\Api\V1\AssetProjectApiController::class, 'summaryReport'])
+            ->name('api.v1.projects.reports.summary');
+
+        // Project Showcase / Entities Management
+        Route::get('/projects/assets', [\App\Http\Controllers\Api\V1\AssetProjectApiController::class, 'index'])
+            ->name('api.v1.projects.assets.index');
+        Route::post('/projects/assets', [\App\Http\Controllers\Api\V1\AssetProjectApiController::class, 'store'])
+            ->name('api.v1.projects.assets.store');
+        Route::get('/projects/assets/{id}', [\App\Http\Controllers\Api\V1\AssetProjectApiController::class, 'show'])
+            ->name('api.v1.projects.assets.show');
+        Route::put('/projects/assets/{id}', [\App\Http\Controllers\Api\V1\AssetProjectApiController::class, 'update'])
+            ->name('api.v1.projects.assets.update');
+        Route::delete('/projects/assets/{id}', [\App\Http\Controllers\Api\V1\AssetProjectApiController::class, 'destroy'])
+            ->name('api.v1.projects.assets.destroy');
+
+        // Project Training Courses
+        Route::get('/projects/courses', [\App\Http\Controllers\Api\V1\AssetCourseApiController::class, 'index'])
+            ->name('api.v1.projects.courses.index');
+        Route::post('/projects/courses', [\App\Http\Controllers\Api\V1\AssetCourseApiController::class, 'store'])
+            ->name('api.v1.projects.courses.store');
+        Route::get('/projects/courses/{id}', [\App\Http\Controllers\Api\V1\AssetCourseApiController::class, 'show'])
+            ->name('api.v1.projects.courses.show');
+        Route::put('/projects/courses/{id}', [\App\Http\Controllers\Api\V1\AssetCourseApiController::class, 'update'])
+            ->name('api.v1.projects.courses.update');
+        Route::delete('/projects/courses/{id}', [\App\Http\Controllers\Api\V1\AssetCourseApiController::class, 'destroy'])
+            ->name('api.v1.projects.courses.destroy');
+
+        // Trainees Management & Lifecycle Tracking
+        Route::get('/projects/trainees', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'index'])
+            ->name('api.v1.projects.trainees.index');
+        Route::post('/projects/trainees', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'store'])
+            ->name('api.v1.projects.trainees.store');
+        Route::get('/projects/trainees/{id}', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'show'])
+            ->name('api.v1.projects.trainees.show');
+        Route::put('/projects/trainees/{id}', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'update'])
+            ->name('api.v1.projects.trainees.update');
+        Route::delete('/projects/trainees/{id}', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'destroy'])
+            ->name('api.v1.projects.trainees.destroy');
+
+        // Qualification Status, Call Types & Assessment Feedbacks
+        Route::post('/projects/trainees/{id}/status', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'updateStatus'])
+            ->name('api.v1.projects.trainees.status');
+        Route::post('/projects/trainees/{id}/call-type', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'updateCallType'])
+            ->name('api.v1.projects.trainees.call-type');
+        Route::get('/projects/trainees/{id}/feedbacks', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'getFeedbacks'])
+            ->name('api.v1.projects.trainees.feedbacks.index');
+        Route::post('/projects/trainees/{id}/feedbacks', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'storeFeedback'])
+            ->name('api.v1.projects.trainees.feedbacks.store');
+    });
 });
 
 
