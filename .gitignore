@@ -20,3 +20,8 @@ error_log
 *.sql.gz
 *.sqlite
 
+/storage/fonts/*
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+
+

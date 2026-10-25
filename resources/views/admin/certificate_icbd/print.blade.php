@@ -203,10 +203,20 @@
                     </div>
                 </div>
                 <div class="header-right">
-                     <img src="data:image/png;base64, {!! base64_encode(
-                                        QrCode::format('png')->size(150)->generate('https://innovacomputersbd.com/certifiocate-verify/' . $certificate->certificate_no),
-                                    ) !!}" alt="QR" class="qr">
-                    {{-- <img src="certificate-qr.png" alt="QR" class="qr"> --}}
+                    @php
+                        if (empty($qrCodeData)) {
+                            try {
+                                $qrCodeData = 'data:image/png;base64,' . base64_encode(
+                                    QrCode::format('png')->size(150)->generate(url('/certifiocate-verify/' . $certificate->certificate_no))
+                                );
+                            } catch (\Throwable $e) {
+                                $qrCodeData = 'data:image/svg+xml;base64,' . base64_encode(
+                                    QrCode::format('svg')->size(150)->generate(url('/certifiocate-verify/' . $certificate->certificate_no))
+                                );
+                            }
+                        }
+                    @endphp
+                    <img src="{{ $qrCodeData }}" alt="QR" class="qr">
                 </div>
             </div>
 

@@ -482,6 +482,67 @@ Route::prefix('v1')->group(function () {
         Route::post('/projects/trainees/{id}/feedbacks', [\App\Http\Controllers\Api\V1\AssetTraineeApiController::class, 'storeFeedback'])
             ->name('api.v1.projects.trainees.feedbacks.store');
     });
+
+    // =========================================================================
+    // CERTIFICATES & VERIFICATION ROUTES (Phase 2.8)
+    // =========================================================================
+    // Public Certificate Verification (Unauthenticated)
+    Route::get('/certificates/verify/{certificateNo?}', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'verify'])
+        ->name('api.v1.certificates.verify');
+
+    Route::middleware(['auth:sanctum', 'admin.identity'])->group(function () {
+        // Summary & Reports
+        Route::get('/certificates/reports/summary', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'summaryReport'])
+            ->name('api.v1.certificates.reports.summary');
+
+        // Student Eligibility Assessment
+        Route::get('/certificates/eligibility/{studentId}', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'eligibility'])
+            ->where('studentId', '[0-9]+')
+            ->name('api.v1.certificates.eligibility');
+
+        // BTEB Board Certificates Management
+        Route::get('/certificates/bteb', [\App\Http\Controllers\Api\V1\BtebCertificateApiController::class, 'index'])
+            ->name('api.v1.certificates.bteb.index');
+        Route::post('/certificates/bteb', [\App\Http\Controllers\Api\V1\BtebCertificateApiController::class, 'store'])
+            ->name('api.v1.certificates.bteb.store');
+        Route::get('/certificates/bteb/{id}', [\App\Http\Controllers\Api\V1\BtebCertificateApiController::class, 'show'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.bteb.show');
+        Route::put('/certificates/bteb/{id}', [\App\Http\Controllers\Api\V1\BtebCertificateApiController::class, 'update'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.bteb.update');
+        Route::delete('/certificates/bteb/{id}', [\App\Http\Controllers\Api\V1\BtebCertificateApiController::class, 'destroy'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.bteb.destroy');
+
+        // Institutional (ICBD) Certificates Management
+        Route::get('/certificates', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'index'])
+            ->name('api.v1.certificates.index');
+        Route::post('/certificates', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'store'])
+            ->name('api.v1.certificates.store');
+        Route::get('/certificates/{id}', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'show'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.show');
+        Route::put('/certificates/{id}', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'update'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.update');
+        Route::delete('/certificates/{id}', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'destroy'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.destroy');
+        Route::post('/certificates/{id}/status', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'updateStatus'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.status');
+        Route::get('/certificates/{id}/qr', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'qr'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.qr');
+        Route::get('/certificates/{id}/print', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'print'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.print');
+        Route::get('/certificates/{id}/pdf', [\App\Http\Controllers\Api\V1\CertificateApiController::class, 'pdf'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.certificates.pdf');
+    });
 });
+
 
 

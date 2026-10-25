@@ -110,4 +110,20 @@ class Students extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function certificatesIcbd()
+    {
+        return $this->hasMany(Certificate_icbd::class, 'student_id');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function btebCertificates()
+    {
+        return $this->hasMany(Certificates::class, 'student_id');
+    }
 }

@@ -4,9 +4,15 @@ namespace App\Models;
 
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Certificates extends Model
 {
+    use SoftDeletes;
+
+    public const STATUS_ACTIVE   = 1;
+    public const STATUS_INACTIVE = 0;
+
     /**
      * @var string
      */
@@ -28,24 +34,28 @@ class Certificates extends Model
         'dDate',
         'IsActive',
     ];
-    /**
-     * Get all of the comments for the Students
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    // public function StudentsInfo(): HasMany
-    // {
-    //     return $this->hasMany(Students::class, 'id', 'student_id');
-    // }
 
+    protected $dates = [
+        'pDate',
+        'dDate',
+        'deleted_at',
+        'created_at',
+        'updated_at',
+    ];
 
     /**
-     * Get the comments for the blog post.
+     * Get the student for the certificate.
      */
     public function StudentsInfo()
     {
         return $this->belongsTo(Students::class, 'student_id');
     }
+
+    public function student()
+    {
+        return $this->belongsTo(Students::class, 'student_id');
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
@@ -53,6 +63,12 @@ class Certificates extends Model
     {
         return $this->belongsTo(Session::class, 'session_id');
     }
+
+    public function session()
+    {
+        return $this->belongsTo(Session::class, 'session_id');
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
