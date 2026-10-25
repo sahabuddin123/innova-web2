@@ -542,6 +542,57 @@ Route::prefix('v1')->group(function () {
             ->where('id', '[0-9]+')
             ->name('api.v1.certificates.pdf');
     });
+
+    // =========================================================================
+    // SYSTEM SETTINGS & SMS GATEWAY ROUTES (Phase 2.9)
+    // =========================================================================
+    // Public Settings (Unauthenticated)
+    Route::get('/settings/public', [\App\Http\Controllers\Api\V1\SettingApiController::class, 'publicSettings'])
+        ->name('api.v1.settings.public');
+
+    // Administrative System Settings & SMS Gateway Routes
+    Route::middleware(['auth:sanctum', 'admin.identity'])->group(function () {
+        // System Settings
+        Route::get('/settings', [\App\Http\Controllers\Api\V1\SettingApiController::class, 'index'])
+            ->name('api.v1.settings.index');
+        Route::put('/settings', [\App\Http\Controllers\Api\V1\SettingApiController::class, 'update'])
+            ->name('api.v1.settings.update');
+
+        // SMS Provider Configuration
+        Route::get('/settings/sms', [\App\Http\Controllers\Api\V1\SettingApiController::class, 'getSmsSettings'])
+            ->name('api.v1.settings.sms.get');
+        Route::put('/settings/sms', [\App\Http\Controllers\Api\V1\SettingApiController::class, 'updateSmsSettings'])
+            ->name('api.v1.settings.sms.update');
+
+        // SMS Delivery History & Details
+        Route::get('/sms/logs', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'logs'])
+            ->name('api.v1.sms.logs.index');
+        Route::get('/sms/logs/{id}', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'showLog'])
+            ->where('id', '[0-9]+')
+            ->name('api.v1.sms.logs.show');
+
+        // SMS Templates Management
+        Route::get('/sms/templates', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'templates'])
+            ->name('api.v1.sms.templates.index');
+        Route::put('/sms/templates/{key}', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'updateTemplate'])
+            ->name('api.v1.sms.templates.update');
+
+        // SMS Gateway Connectivity Test
+        Route::post('/sms/test-connection', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'testConnection'])
+            ->middleware('throttle:5,1')
+            ->name('api.v1.sms.test-connection');
+
+        // SMS Sending Operations
+        Route::post('/sms/send', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'send'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.sms.send');
+        Route::post('/sms/send-template', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'sendTemplate'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.sms.send-template');
+        Route::post('/sms/send-batch', [\App\Http\Controllers\Api\V1\SmsApiController::class, 'sendBatch'])
+            ->middleware('throttle:10,1')
+            ->name('api.v1.sms.send-batch');
+    });
 });
 
 

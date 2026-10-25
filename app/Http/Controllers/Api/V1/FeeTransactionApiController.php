@@ -480,25 +480,7 @@ class FeeTransactionApiController extends ApiController
         }
 
         try {
-            $smsUrl = config('services.sms.url', env('SMS_URL'));
-            $apiKey = config('services.sms.api_key', env('SMS_API_KEY'));
-
-            if (!empty($smsUrl) && !empty($apiKey)) {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $smsUrl);
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, [
-                    'api_key'  => $apiKey,
-                    'type'     => 'text/unicode',
-                    'contacts' => '88' . $phone,
-                    'msg'      => $msg,
-                ]);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-                curl_exec($ch);
-                curl_close($ch);
-            }
+            app(\App\Services\SmsService::class)->sendRaw($phone, $msg);
         } catch (\Throwable $e) {
             Log::warning('SMS dispatch failed non-critically: ' . $e->getMessage());
         }
